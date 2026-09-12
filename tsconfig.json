@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": []
+    // No `paths`: every host import resolves from the installed @deepseek-ai/*
+    // devDependencies, whose published exports carry the subpaths this plugin
+    // uses (`/client`, `/types`). In the monorepo the same imports resolve into
+    // the checkout's sources instead — same names, same types, no shims.
+  },
+  "include": ["src"]
+}
