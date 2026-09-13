@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ewoowe/session-messages-plugin"
+    "url": "git+https://github.com/ewoowe/session-messages-plugin.git"
   },
   "keywords": [
     "dsh",
