@@ -1,12 +1,12 @@
 {
   "name": "dsh-session-messages",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Session messages viewer: a keyboard-driven overlay for listing and jumping to messages within the current session.",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ewoowe/dsh-session-messages.git"
+    "url": "git+https://github.com/ewoowe/session-messages-plugin"
   },
   "keywords": [
     "dsh",
