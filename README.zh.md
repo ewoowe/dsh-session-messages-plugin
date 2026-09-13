@@ -11,6 +11,8 @@
 
 这是一个**独立安装到 profile 的插件**，不修改 `deepseek-harness` 的任何源码（`packages/` 未改动）。
 
+![消息列表：覆盖在 transcript 上的可搜索浮层，显示已加载条数与会话用量总计](docs/message-list.zh.png)
+
 ## 语言
 
 插件自己的文案提供七种语言，全部在 `src/client/locales.ts`：
@@ -159,6 +161,8 @@ macOS 想用 `Cmd+S`：`ctrl: false`、`meta: true`。
 
 ## 在设置页里改（免改文件）
 
+![设置卡片：设置 → 插件 → 插件配置里的「会话消息」](docs/settings-card.zh.png)
+
 上面这些字段也能在界面上改，不必动 `cordis.patch.yml`：
 
 **设置 → 插件 → 插件配置** → 「会话消息」（默认收起，点头部展开）
@@ -171,6 +175,8 @@ macOS 想用 `Cmd+S`：`ctrl: false`、`meta: true`。
 `describe()` 里有这个命名空间，且浏览器侧注册了 key 同为 `session-messages` 的卡片。
 
 ## 视口浮条
+
+![视口浮条：居中在会话标题栏上的一块，显示正在阅读的那条消息及其时钟、用量、用时](docs/viewport-strip.zh.png)
 
 开关是 `showHud`（设置页里的「显示视口浮条」，或 `cordis.patch.yml`）。开启后在
 **会话标题栏的正中间**出现一块，随滚动实时更新：

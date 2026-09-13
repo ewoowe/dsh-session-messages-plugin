@@ -14,6 +14,8 @@ An in-session message viewer with two surfaces:
 This is a **standalone plugin installed into a profile**. It does not modify any source of
 `deepseek-harness` (`packages/` is untouched).
 
+![The message list: a searchable overlay over the transcript, with the loaded-message count and the session's token totals](docs/message-list.en.png)
+
 ## Languages
 
 The plugin's own copy ships in seven languages, all in `src/client/locales.ts`:
@@ -174,6 +176,8 @@ For `Cmd+S` on macOS: `ctrl: false`, `meta: true`.
 
 ## Editing it in the settings page
 
+![The settings card: Session messages under Settings → Plugins → Plugin configuration](docs/settings-card.en.png)
+
 The same fields can be edited in the UI, without touching `cordis.patch.yml`:
 
 **Settings → Plugins → Plugin configuration** → "Session messages" (collapsed by default; click
@@ -189,6 +193,8 @@ at once: the Host's `describe()` must list that namespace, and the browser side 
 card whose key is that same `session-messages`.
 
 ## Viewport strip
+
+![The viewport strip: a block centred on the session header showing the message being read, with its clock, usage and duration](docs/viewport-strip.en.png)
 
 The switch is `showHud` (the "Show the viewport strip" toggle in the settings page, or
 `cordis.patch.yml`). With it on, a block appears **centred on the session header** and updates as

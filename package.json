@@ -24,6 +24,7 @@
   },
   "files": [
     "lib",
+    "docs",
     "cordis.patch.yml"
   ],
   "engines": {
