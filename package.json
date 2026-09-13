@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-messages",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Session messages viewer: a keyboard-driven overlay for listing and jumping to messages within the current session.",
   "type": "module",
   "license": "MIT",
