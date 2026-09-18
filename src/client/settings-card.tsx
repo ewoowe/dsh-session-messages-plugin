@@ -8,6 +8,11 @@
  * modifiers are the only field-shape difference this card needs, so a few
  * hand-rolled inputs and the primitives' `Switch` are simpler than borrowing
  * the shared form machinery.
+ *
+ * Rendered on this bundle's own page on the Plugins surface
+ * (`plugins.bundle.config`, see `src/client/index.ts`). That seat asks for
+ * `view: 'page'` only and the page draws the title and the crumb itself, so
+ * this file owns the form and nothing else.
  */
 import {
   useCallback, useEffect, useRef, useState, useSyncExternalStore,
@@ -40,6 +45,11 @@ type Field = typeof FIELDS[number]
 interface SettingsCardProps {
   /** Bound settings scope for the `session-messages` namespace. Absent renders the unavailable state. */
   scope: MessagesSettingsScope | undefined
+  /**
+   * Which view the owning seat asks for. A bundle's configuration is asked for
+   * as `page` only; `summary` renders nothing rather than a line nobody places.
+   */
+  view: 'summary' | 'page'
   /** Locale translate. */
   t: (key: MessagesKey, params?: Record<string, unknown>) => string
 }
@@ -124,7 +134,7 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
   // down inside the slot's error boundary. Falling back to key-named labels
   // keeps the hooks below unconditional — an early return here would render
   // zero hooks on the first pass and one on the next.
-  const { scope } = props
+  const { scope, view } = props
   const t: (key: MessagesKey, params?: Record<string, unknown>) => string =
     typeof props.t === 'function' ? props.t : (key) => String(key)
   const snapshot = useScope(scope)
@@ -132,12 +142,12 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
   /**
-   * Collapsed by default, matching the other cards in this section: the list is
-   * a scan of several plugins, so an always-open card pushes the rest off
-   * screen. Disclosure is card-local reading state — the Host has no stake in
-   * which one is open.
+   * Open by default: the form now sits in this bundle's own configuration
+   * section, which exists because this card registered, so a disclosure would
+   * only add a click in front of the only thing the section holds. Disclosure
+   * stays card-local reading state — the Host has no stake in it.
    */
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
   /** Pointer hover, which tints the border exactly as the peer plugin cards do. */
   const [hover, setHover] = useState(false)
   /** Whether a save is in flight, so it can collapse only after it settles. */
@@ -167,10 +177,12 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
     })
   }, [snapshot])
 
+  if (view === 'summary') return null
+
   const current = snapshot.value
   if (current === undefined) {
     return (
-      <li
+      <div
         style={CARD_STYLE(open, hover)}
         onMouseEnter={() => { setHover(true) }}
         onMouseLeave={() => { setHover(false) }}
@@ -181,7 +193,7 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
             <span style={DESC_STYLE}>{t('unavailable')}</span>
           </span>
         </div>
-      </li>
+      </div>
     )
   }
 
@@ -271,7 +283,7 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
   }, [dirty, failed, saving])
 
   return (
-    <li
+    <div
       style={CARD_STYLE(open, hover)}
       onMouseEnter={() => { setHover(true) }}
       onMouseLeave={() => { setHover(false) }}
@@ -431,7 +443,7 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
           </div>
         </div>
       ) : null}
-    </li>
+    </div>
   )
 }
 

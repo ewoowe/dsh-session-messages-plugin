@@ -2,10 +2,11 @@
  * Browser half of the session-messages plugin.
  *
  * Mounts the overlay into the `shell.overlay` slot — a frame-wide, click-through
- * floating layer declared by ui-layout — and contributes a settings card to
- * the Settings → Plugins → Plugin configuration page. The overlay never sees a
- * Cordis context: paging goes through the registration's inject face, and the
- * chord and `maxRows` are read from the `session-messages` settings scope.
+ * floating layer declared by ui-layout — and contributes the configuration form
+ * to this bundle's own page on the Plugins surface (the `plugins.bundle.config`
+ * seat, keyed by the package name). The overlay never sees a Cordis context:
+ * paging goes through the registration's inject face, and the chord and
+ * `maxRows` are read from the `session-messages` settings scope.
  *
  * This file is `.ts`, not `.tsx`, on purpose: the rolldown/oxc JSX parser
  * trips over `SettingsScope<MessagesConfig>` whenever a generic-typed symbol
@@ -17,6 +18,9 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 // Type-only merges: pull in ctx.slots, ctx.sessions, ctx.settingsScope.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+// The session row a `mainView` lookup is read off. Named rather than inferred:
+// `Object.values` widens to `unknown[]` on the branded `SessionId` key type.
+import type { SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Declares the 'shell.overlay' slot the overlay registers into; without this
@@ -25,6 +29,11 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Same, for the Session header's action seat the viewport strip registers into.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+// Declares the 'plugins.bundle.config' seat the configuration form registers
+// into; without this merge that slot name is not in SlotMap and the register
+// below does not compile.
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 // The catalog shape the model names are read from; `remote.session.modelCatalog`
 // returns it, and its `groups[].models[].name` is the label the composer shows.
 import type { ModelCatalog } from '@deepseek-ai/dsh-api-session-controller/types'
@@ -40,6 +49,43 @@ import { en, NS, PACK_LOCALES, zh, type MessagesKey } from './locales.ts'
 
 /** Settings namespace shared with the Node half (see `SETTINGS_NAMESPACE` in src/index.ts). */
 const SETTINGS_NAMESPACE = 'session-messages'
+
+/**
+ * The package name the profile installs this bundle under.
+ *
+ * It is the key a bundle's configuration is dispatched with: the Plugins page
+ * pairs a registered `plugins.bundle.config` entry with the bundle page it
+ * belongs to by the package name it read from the Host's inventory, so a
+ * mismatch — or the seat this used to register into, `settings.plugin.item`,
+ * which 0.1.6 removed — renders nothing, silently.
+ */
+const BUNDLE_PACKAGE_NAME = 'dsh-session-messages'
+
+/**
+ * The session the main view is showing, or undefined when none is open.
+ *
+ * 0.1.6 dropped `SessionListState.current`, which this plugin used to read. The
+ * view now retains the session it displays under the `mainView` source, and the
+ * host's own consumers pick it out of the list that way (DocumentTitle, the
+ * workspace browser, ui-session). Reading the legacy field last keeps one build
+ * working on a 0.1.5 host too, where `retainedBy` does not exist at all.
+ * @param sessions - the session controller's read face.
+ * @returns the main view's session id, or undefined when no session is open.
+ */
+function mainViewSessionId(sessions: ClientContext['sessions']): SessionId | undefined {
+  const list = sessions.list.getSnapshot()
+  const rows = Object.values(list.byId) as readonly SessionSummary[]
+  // `mainView` is a retention source declared by ui-session and ui-workspace,
+  // not by the controller whose types this file compiles against, so the count
+  // is read structurally instead of through the merged label union. The
+  // `undefined` in the cast is the 0.1.5 host, whose rows carry no counts at all.
+  const row = rows.find((candidate) => {
+    const retained = candidate.retainedBy as Partial<Record<string, number>> | undefined
+    return (retained?.mainView ?? 0) > 0
+  })
+  if (row !== undefined) return row.id
+  return (list as { readonly current?: SessionId }).current
+}
 
 /**
  * Services required before the overlay can register.
@@ -77,13 +123,13 @@ interface SettingsScopeHost {
 
 /** Render the settings card given the slot's standard props. */
 function renderSettingsEntry(
-  props: { t: (key: MessagesKey, params?: Record<string, unknown>) => string },
+  props: { view: 'summary' | 'page'; t: (key: MessagesKey, params?: Record<string, unknown>) => string },
   scope: MessagesScope,
 ): ReactNode {
   // `scope`, not `settingsScope`: that is the prop name the card declares. A
   // mismatch here leaves `props.scope` undefined and the card throws inside the
   // slot's error boundary on its first `scope.getSnapshot()` — it never renders.
-  return createElement(MessagesSettingsCard, { scope, t: props.t })
+  return createElement(MessagesSettingsCard, { scope, view: props.view, t: props.t })
 }
 
 /**
@@ -153,14 +199,14 @@ export function apply(ctx: ClientContext): void {
         // Page one earlier messages window in through the current session's
         // own face; the overlay rebuilds its list from the new DOM.
         loadOlder: async (): Promise<void> => {
-          const current = scope.sessions.list.getSnapshot().current
+          const current = mainViewSessionId(scope.sessions)
           if (current === undefined) return
           await scope.sessions.binding(current)?.session.loadOlder()
         },
         // Whether older messages remains. Without this the auto-fill loop could
         // never tell "exhausted" from "server is slow" and would spin.
         hasMore: (): boolean => {
-          const current = scope.sessions.list.getSnapshot().current
+          const current = mainViewSessionId(scope.sessions)
           if (current === undefined) return false
           return scope.sessions.binding(current)?.session.getSnapshot().hasMore === true
         },
@@ -168,7 +214,7 @@ export function apply(ctx: ClientContext): void {
         // composition without either projection unit returns null, and the
         // overlay simply renders no header stats instead of zeros.
         sessionTotals: (): SessionTotals | null => {
-          const current = scope.sessions.list.getSnapshot().current
+          const current = mainViewSessionId(scope.sessions)
           if (current === undefined) return null
           const session = scope.sessions.binding(current)?.session
           return session === undefined ? null : readSessionTotals(session.projections)
@@ -198,7 +244,7 @@ export function apply(ctx: ClientContext): void {
         // fold — the strip asks once per animation frame.
         inject: () => ({
           turnFactsOf: (turn: number | undefined): TurnFacts | null => {
-            const current = scope.sessions.list.getSnapshot().current
+            const current = mainViewSessionId(scope.sessions)
             if (current === undefined) return null
             const source = scope.sessions.binding(current)?.eventSource
             return source === undefined ? null : turnFactsReader(source)(turn)
@@ -218,16 +264,18 @@ export function apply(ctx: ClientContext): void {
     // Published for the overlay, which mounted earlier and is already
     // subscribed to the holder.
     publishScope(bound)
-    scoped.slots.inject('settings.plugin.item', () => scoped.slots.register({
-      name: 'settings.plugin.item',
-      // The card's key is the settings namespace: that is the only thing the
-      // tab uses to pair a Host-served namespace with the card that edits it.
-      key: SETTINGS_NAMESPACE,
+    // The bundle's own page on the Plugins surface. The seat is keyed by the
+    // PACKAGE name rather than by the settings namespace: the page pairs the
+    // form with whichever bundle that name matches, and asks for `view: 'page'`
+    // only. `SETTINGS_NAMESPACE` still names the document being edited.
+    scoped.slots.inject('plugins.bundle.config', () => scoped.slots.register({
+      name: 'plugins.bundle.config',
+      key: BUNDLE_PACKAGE_NAME,
       locale: NS,
       inject: () => ({
         t: scoped.locale.bind(NS),
       }),
-    }, (props: { t: (key: MessagesKey, params?: Record<string, unknown>) => string }) =>
+    }, (props: { view: 'summary' | 'page'; t: (key: MessagesKey, params?: Record<string, unknown>) => string }) =>
       renderSettingsEntry(props, bound)))
   })
 }

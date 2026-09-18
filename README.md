@@ -80,7 +80,7 @@ session-messages-plugin/
     index.ts                  Node half: Config Schema + publishes config into the page
     shared.ts                 the config shape and resolution, shared by both halves
     client/
-      index.ts                Browser half: registers the two slots and the settings card
+      index.ts                Browser half: registers the two slots and the configuration form
       transcript.ts           the transcript DOM contract (collectors both consumers share)
       search.ts               search: folded matching, hit ranges, excerpting (pure)
       model-names.ts          model display names: host catalog → id lookup (external store)
@@ -89,10 +89,11 @@ session-messages-plugin/
       hud.tsx                 the viewport strip (header action seat)
       use-messages-config.ts  resolve the live config (settings scope → page global)
       session-totals.ts       session-wide facts: projection reads + compact formatting
-      settings-card.tsx       the settings page card (collapsible)
+      settings-card.tsx       the bundle's configuration form on the Plugins page
       settings-scope-holder.ts  the card's bound settings scope → overlay, one-way bridge
       locales.ts              the seven dictionaries (en, zh + five pack locales)
   lib/                build output (index.js / client.js)
+  docs/               the screenshots the two READMEs embed (en / zh pairs)
 ```
 
 ## Install
@@ -174,29 +175,30 @@ profile's own `cordis.patch.yml`. The shortcut is **not** hardcoded in the sourc
 
 For `Cmd+S` on macOS: `ctrl: false`, `meta: true`.
 
-## Editing it in the settings page
+## Editing it on its Plugins page
 
-![The settings card: Session messages under Settings → Plugins → Plugin configuration](docs/settings-card.en.png)
+![The configuration form on this bundle's page: the chord key, its modifiers, the wheel direction, the row cap and the strip switch](docs/settings-card.en.png)
 
 The same fields can be edited in the UI, without touching `cordis.patch.yml`:
 
-**Settings → Plugins → Plugin configuration** → "Session messages" (collapsed by default; click
-the header to expand).
+**Plugins** (the sidebar entry) → `dsh-session-messages` → the form above that bundle's row list.
+It is open by default.
 
-The card lists the chord key, the four modifiers, the wheel direction, the row cap and the strip
-switch. An unsaved edit shows a badge in the header, and a successful save collapses the card.
+The form lists the chord key, the four modifiers, the wheel direction, the row cap and the strip
+switch. Every field carries its own Reset, a field the user layer has overridden is marked, and the
+header collapses the form and shows an unsaved badge. Save applies the draft; discard drops it.
 No restart is needed.
 
-The card's values come from the settings namespace `session-messages` this plugin registers (the
-Node half does it through `settings.installSection`). For the card to appear, two things must hold
-at once: the Host's `describe()` must list that namespace, and the browser side must register a
-card whose key is that same `session-messages`.
+The values come from the settings namespace `session-messages` this plugin registers (the Node half
+does it through `settings.installSection`). The form itself is contributed through the Plugins
+page's `plugins.bundle.config` seat, keyed by the **package name**: that key is what pairs the form
+with this bundle's page, so the two have to be renamed together.
 
 ## Viewport strip
 
 ![The viewport strip: a block centred on the session header showing the message being read, with its clock, usage and duration](docs/viewport-strip.en.png)
 
-The switch is `showHud` (the "Show the viewport strip" toggle in the settings page, or
+The switch is `showHud` (the "Show the viewport strip" toggle in the configuration form, or
 `cordis.patch.yml`). With it on, a block appears **centred on the session header** and updates as
 you scroll:
 

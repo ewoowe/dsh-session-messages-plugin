@@ -69,7 +69,7 @@ session-messages-plugin/
     index.ts                  Node 半：Config Schema + 向页面注入配置
     shared.ts                 两半共享的配置形状与解析
     client/
-      index.ts                浏览器半：注册到 shell.overlay 与设置卡片两个槽位
+      index.ts                浏览器半：注册到 shell.overlay 与配置表单两个槽位
       transcript.ts           transcript DOM 契约层（两个消费者共用的采集原语）
       search.ts               搜索：折叠匹配、命中区间、片段提取（纯函数，可单测）
       model-names.ts          模型显示名：宿主目录 → id 的查找表（外部 store，供浮条读取）
@@ -78,10 +78,11 @@ session-messages-plugin/
       hud.tsx                 视口浮条（注册进会话标题栏的动作座位）
       use-messages-config.ts  解析当前配置（设置作用域 → 退化到页面全局）
       session-totals.ts       页眉会话总计：读投影 + 紧凑格式化
-      settings-card.tsx       设置页卡片（可折叠）
+      settings-card.tsx       插件页上的配置表单
       settings-scope-holder.ts  卡片绑定的设置作用域 → 浮层的单向桥
       locales.ts              七本字典（en、zh + 五种语言包语言）
   lib/                构建产物（index.js / client.js）
+  docs/               两个 README 引用的截图（en / zh 成对）
 ```
 
 ## 安装
@@ -159,26 +160,27 @@ MacBook 无独立翻页键时可用 `Fn`+`↑` `↓`，macOS 会把它转成 `Pa
 
 macOS 想用 `Cmd+S`：`ctrl: false`、`meta: true`。
 
-## 在设置页里改（免改文件）
+## 在插件自己的页面里改（免改文件）
 
-![设置卡片：设置 → 插件 → 插件配置里的「会话消息」](docs/settings-card.zh.png)
+![本 bundle 页面上的配置表单：唤出键、四个修饰键、滚轮方向、最大行数与浮条开关](docs/settings-card.zh.png)
 
 上面这些字段也能在界面上改，不必动 `cordis.patch.yml`：
 
-**设置 → 插件 → 插件配置** → 「会话消息」（默认收起，点头部展开）
+**插件**（侧边栏那一项）→ `dsh-session-messages` → 行列表上方的配置表单，默认展开。
 
-卡片列出唤出键、四个修饰键、滚轮方向、最大行数，逐项可调；有未保存改动时头部显示
-「未保存」标记，保存成功后自动收起。改完无需重启。
+表单列出唤出键、四个修饰键、滚轮方向、最大行数与浮条开关，逐项可调；每个字段都有「重置」，
+被用户层覆盖的字段会标出，头部可折叠并在有未保存改动时显示标记，底部「保存」提交草稿、
+「放弃」丢弃草稿。改完无需重启。
 
-设置页的值来自本插件登记的设置命名空间 `session-messages`（Node 半通过
-`settings.installSection` 登记）。卡片能显示需要两件事同时成立：Host 的
-`describe()` 里有这个命名空间，且浏览器侧注册了 key 同为 `session-messages` 的卡片。
+设置值仍来自本插件登记的设置命名空间 `session-messages`（Node 半通过
+`settings.installSection` 登记）。表单本身注册在插件页的 `plugins.bundle.config` 座位上，
+key 是**包名**——这个 key 决定表单挂到哪个 bundle 的页面，所以两者要一起改。
 
 ## 视口浮条
 
 ![视口浮条：居中在会话标题栏上的一块，显示正在阅读的那条消息及其时钟、用量、用时](docs/viewport-strip.zh.png)
 
-开关是 `showHud`（设置页里的「显示视口浮条」，或 `cordis.patch.yml`）。开启后在
+开关是 `showHud`（配置表单里的「显示视口浮条」，或 `cordis.patch.yml`）。开启后在
 **会话标题栏的正中间**出现一块，随滚动实时更新：
 
 ```text
