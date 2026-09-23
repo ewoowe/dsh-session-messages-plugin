@@ -18,13 +18,13 @@ import {
   useCallback, useEffect, useRef, useState, useSyncExternalStore,
   type CSSProperties, type ReactNode,
 } from 'react'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { IconChevronDownOutline14, Switch, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import { IconChevronDownOutlineMedium, Switch, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import { DEFAULT_CONFIG, type MessagesConfig } from '../shared.ts'
 import type { MessagesKey } from './locales.ts'
 
-/** SettingsScope is the typed window onto the Host document. */
-export type MessagesSettingsScope = SettingsScope<MessagesConfig>
+/** ConfigForm is the typed window onto the Host document. */
+export type MessagesConfigForm = ConfigForm<MessagesConfig>
 
 /** One draft value pending a save. Undefined means the field is unchanged. */
 type Draft = {
@@ -43,8 +43,8 @@ const FIELDS = ['key', 'ctrl', 'alt', 'shift', 'meta', 'wheelInverted', 'maxRows
 type Field = typeof FIELDS[number]
 
 interface SettingsCardProps {
-  /** Bound settings scope for the `session-messages` namespace. Absent renders the unavailable state. */
-  scope: MessagesSettingsScope | undefined
+  /** Config form for the `session-messages` namespace. Absent renders the unavailable state. */
+  form: MessagesConfigForm | undefined
   /**
    * Which view the owning seat asks for. A bundle's configuration is asked for
    * as `page` only; `summary` renders nothing rather than a line nobody places.
@@ -61,24 +61,26 @@ interface SettingsCardProps {
  * namespace).
  */
 /**
- * Snapshot reported when no scope is bound. The card already renders its
- * `unavailable` state for a snapshot with no value, so a missing scope degrades
+ * Snapshot reported when no form is bound. The card already renders its
+ * `unavailable` state for a snapshot with no value, so a missing form degrades
  * to that message instead of throwing inside the slot's error boundary and
  * taking the whole card list down with it.
  */
-const NO_SCOPE_SNAPSHOT = {
+const NO_FORM_SNAPSHOT = {
   status: 'unavailable',
   value: undefined,
+  base: undefined,
+  user: undefined,
   revision: undefined,
   writable: false,
   mode: 'memory',
-} as unknown as SettingsScopeSnapshot<MessagesConfig>
+} as unknown as ConfigFormSnapshot<MessagesConfig>
 
-function useScope(scope: MessagesSettingsScope | undefined): SettingsScopeSnapshot<MessagesConfig> {
+function useForm(form: MessagesConfigForm | undefined): ConfigFormSnapshot<MessagesConfig> {
   return useSyncExternalStore(
-    (listener) => (scope === undefined ? () => {} : scope.subscribe(listener)),
-    () => (scope === undefined ? NO_SCOPE_SNAPSHOT : scope.getSnapshot()),
-    () => (scope === undefined ? NO_SCOPE_SNAPSHOT : scope.getSnapshot()),
+    (listener) => (form === undefined ? () => {} : form.subscribe(listener)),
+    () => (form === undefined ? NO_FORM_SNAPSHOT : form.getSnapshot()),
+    () => (form === undefined ? NO_FORM_SNAPSHOT : form.getSnapshot()),
   )
 }
 
@@ -99,7 +101,7 @@ function isFieldInvalid(
 }
 
 /** True when the field's stored value differs from the schema default. */
-function isFieldOverridden(snapshot: SettingsScopeSnapshot<MessagesConfig>, field: Field): boolean {
+function isFieldOverridden(snapshot: ConfigFormSnapshot<MessagesConfig>, field: Field): boolean {
   const user = snapshot.user as Record<string, unknown> | undefined
   return user !== undefined && Object.hasOwn(user, field)
 }
@@ -134,10 +136,10 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
   // down inside the slot's error boundary. Falling back to key-named labels
   // keeps the hooks below unconditional — an early return here would render
   // zero hooks on the first pass and one on the next.
-  const { scope, view } = props
+  const { form, view } = props
   const t: (key: MessagesKey, params?: Record<string, unknown>) => string =
     typeof props.t === 'function' ? props.t : (key) => String(key)
-  const snapshot = useScope(scope)
+  const snapshot = useForm(form)
   const [draft, setDraft] = useState<Draft>({})
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -225,13 +227,13 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
       delete next[field]
       return next
     })
-    // No scope means no document to clear: the draft is dropped and the card
+    // No form means no document to clear: the draft is dropped and the card
     // has already rendered its unavailable state.
-    if (scope === undefined) return
+    if (form === undefined) return
     if (isFieldOverridden(snapshot, field)) {
-      try { await scope.unset(field) } catch { /* the next snapshot reports the rejection */ }
+      try { await form.unset(field) } catch { /* the next snapshot reports the rejection */ }
     }
-  }, [scope, snapshot])
+  }, [form, snapshot])
 
   const dirty = FIELDS.some((field) => draft[field] !== undefined)
   const invalid = FIELDS.some((field) => {
@@ -242,9 +244,9 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
   const writable = snapshot.writable && !saving
 
   const save = async (): Promise<void> => {
-    // Without a scope there is nothing to write against; `writable` already
-    // reflects that, but the guard also narrows `scope` for the calls below.
-    if (scope === undefined || !dirty || invalid || !writable) return
+    // Without a form there is nothing to write against; `writable` already
+    // reflects that, but the guard also narrows `form` for the calls below.
+    if (form === undefined || !dirty || invalid || !writable) return
     setSaving(true)
     setFailed(false)
     let landed = true
@@ -253,7 +255,9 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
         const staged = draft[field]
         if (staged === undefined) continue
         try {
-          await scope.set(field, staged as never)
+          // `set` resolves false for a Host refusal and only rejects on a
+          // transport failure; both must keep the draft on screen.
+          if (!await form.set(field, staged as never)) landed = false
         } catch {
           landed = false
         }
@@ -301,7 +305,7 @@ export function MessagesSettingsCard(props: SettingsCardProps): ReactNode {
         </span>
         {dirty && <span style={PENDING_STYLE}><Tag tone="neutral">{t('unsaved')}</Tag></span>}
         <span style={CHEVRON_STYLE(open)} aria-hidden="true">
-          <IconChevronDownOutline14 />
+          <IconChevronDownOutlineMedium size={14} />
         </span>
       </button>
 

@@ -9,13 +9,13 @@
  * `maxRows` are read from the `session-messages` settings scope.
  *
  * This file is `.ts`, not `.tsx`, on purpose: the rolldown/oxc JSX parser
- * trips over `SettingsScope<MessagesConfig>` whenever a generic-typed symbol
+ * trips over `ConfigForm<MessagesConfig>` whenever a generic-typed symbol
  * sits near a JSX element in cjs output. `React.createElement` keeps the
  * shape legible without paying that price.
  */
 import { createElement, type ReactNode } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-// Type-only merges: pull in ctx.slots, ctx.sessions, ctx.settingsScope.
+// Type-only merges: pull in ctx.slots, ctx.sessions, ctx.configForms.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 // The session row a `mainView` lookup is read off. Named rather than inferred:
@@ -28,7 +28,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Same, for the Session header's action seat the viewport strip registers into.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 // Declares the 'plugins.bundle.config' seat the configuration form registers
 // into; without this merge that slot name is not in SlotMap and the register
 // below does not compile.
@@ -43,7 +43,7 @@ import { MessagesSettingsCard } from './settings-card.tsx'
 import { readSessionTotals, type SessionTotals } from './session-totals.ts'
 import { publishModelNames } from './model-names.ts'
 import { turnFactsReader, type TurnFacts } from './turn-facts.ts'
-import { publishScope } from './settings-scope-holder.ts'
+import { publishForm } from './settings-form-holder.ts'
 import type { MessagesConfig } from '../shared.ts'
 import { en, NS, PACK_LOCALES, zh, type MessagesKey } from './locales.ts'
 
@@ -90,7 +90,7 @@ function mainViewSessionId(sessions: ClientContext['sessions']): SessionId | und
 /**
  * Services required before the overlay can register.
  *
- * `settingsScope` is deliberately NOT here. A module-level entry keeps the
+ * `configForms` is deliberately NOT here. A module-level entry keeps the
  * whole plugin unmounted on any host without that service — the overlay would
  * disappear to gain a card. The card is registered through a nested inject
  * instead, so on such a host it simply never appears and everything else
@@ -104,16 +104,16 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-/** Bound settings scope for `session-messages`. */
-type MessagesScope = SettingsScope<MessagesConfig>
+/** Config form for `session-messages`. */
+type MessagesForm = ConfigForm<MessagesConfig>
 
 /**
- * The host surface the nested `settingsScope` inject hands back. Declared
+ * The host surface the nested `configForms` inject hands back. Declared
  * structurally: the host supplies the real Context, and naming only what is
  * touched keeps this external package free of monorepo-internal types.
  */
-interface SettingsScopeHost {
-  settingsScope: { bind<T>(spec: { namespace: string }): MessagesScope }
+interface SettingsFormHost {
+  configForms: { get<T>(entryId: string): ConfigForm<T> }
   slots: {
     inject(name: string, register: () => unknown): void
     register(options: Record<string, unknown>, render: (props: never) => unknown): unknown
@@ -124,12 +124,12 @@ interface SettingsScopeHost {
 /** Render the settings card given the slot's standard props. */
 function renderSettingsEntry(
   props: { view: 'summary' | 'page'; t: (key: MessagesKey, params?: Record<string, unknown>) => string },
-  scope: MessagesScope,
+  form: MessagesForm,
 ): ReactNode {
-  // `scope`, not `settingsScope`: that is the prop name the card declares. A
-  // mismatch here leaves `props.scope` undefined and the card throws inside the
-  // slot's error boundary on its first `scope.getSnapshot()` — it never renders.
-  return createElement(MessagesSettingsCard, { scope, view: props.view, t: props.t })
+  // `form`, not `scope`: that is the prop name the card declares. A mismatch
+  // here leaves `props.form` undefined and the card throws inside the slot's
+  // error boundary on its first `form.getSnapshot()` — it never renders.
+  return createElement(MessagesSettingsCard, { form, view: props.view, t: props.t })
 }
 
 /**
@@ -253,21 +253,24 @@ export function apply(ctx: ClientContext): void {
       }, (props: ViewportMessageHudProps) => createElement(ViewportMessageHud, props)))
   })
 
-  // The settings card, behind a nested inject: on a host with no
-  // `settingsScope` service the callback never runs and no card appears,
-  // instead of the whole plugin failing to mount.
+  // The settings card, behind a nested inject: on a host with no `configForms`
+  // service the callback never runs and no card appears, instead of the whole
+  // plugin failing to mount.
   const settingsCtx = ctx as unknown as {
-    inject(services: string[], callback: (scoped: SettingsScopeHost) => void): void
+    inject(services: string[], callback: (scoped: SettingsFormHost) => void): void
   }
-  settingsCtx.inject(['settingsScope'], (scoped) => {
-    const bound = scoped.settingsScope.bind<MessagesConfig>({ namespace: SETTINGS_NAMESPACE })
+  settingsCtx.inject(['configForms'], (scoped) => {
+    // Addressed by the profile ENTRY id — the settings namespace — not by the
+    // bundle package name the seat below is keyed with: the two are different
+    // identities and only this one reaches the document.
+    const bound = scoped.configForms.get<MessagesConfig>(SETTINGS_NAMESPACE)
     // Published for the overlay, which mounted earlier and is already
     // subscribed to the holder.
-    publishScope(bound)
+    publishForm(bound)
     // The bundle's own page on the Plugins surface. The seat is keyed by the
-    // PACKAGE name rather than by the settings namespace: the page pairs the
-    // form with whichever bundle that name matches, and asks for `view: 'page'`
-    // only. `SETTINGS_NAMESPACE` still names the document being edited.
+    // PACKAGE name because the page pairs the form with whichever bundle that
+    // name matches, and asks for `view: 'page'` only. `SETTINGS_NAMESPACE`
+    // still names the document being edited.
     scoped.slots.inject('plugins.bundle.config', () => scoped.slots.register({
       name: 'plugins.bundle.config',
       key: BUNDLE_PACKAGE_NAME,

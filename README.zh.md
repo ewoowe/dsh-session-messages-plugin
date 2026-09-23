@@ -76,10 +76,10 @@ session-messages-plugin/
       turn-facts.ts           每轮事实：从事件窗口折叠「轮次 → 模型 + 缓存命中率」（用量复用宿主 deriveTurnTokenUsage）
       overlay.tsx             列表浮层组件、消息采集与跳转
       hud.tsx                 视口浮条（注册进会话标题栏的动作座位）
-      use-messages-config.ts  解析当前配置（设置作用域 → 退化到页面全局）
+      use-messages-config.ts  解析当前配置（配置表单 → 退化到页面全局）
       session-totals.ts       页眉会话总计：读投影 + 紧凑格式化
       settings-card.tsx       插件页上的配置表单
-      settings-scope-holder.ts  卡片绑定的设置作用域 → 浮层的单向桥
+      settings-form-holder.ts  卡片绑定的配置表单 → 浮层的单向桥
       locales.ts              七本字典（en、zh + 五种语言包语言）
   lib/                构建产物（index.js / client.js）
   docs/               两个 README 引用的截图（en / zh 成对）
@@ -124,8 +124,13 @@ npm run typecheck                          # tsc --noEmit
 ```
 
 **依赖版本写死，不要用 `latest`**：`@deepseek-ai/*` 这一族的 `latest` 标签是**过期的**
-`0.0.1-rc.1`，与本插件匹配的是 `next` 标签的 `0.1.5-rc.2`——裸装会拿到错版本。
+`0.0.1-rc.1`，与本插件匹配的是 `next` 标签的 `0.1.7-rc.1`——裸装会拿到错版本。
 宿主升级时同步更新这里的钉版。
+
+`overrides` 出于同样的理由向下再钉了一层：`tsdown` 依赖 `rolldown ~1.2.0`，但
+`rolldown@1.2.10` 没有发布 `@rolldown/binding-linux-arm64-musl` 这个平台包，重新解析会产出一份
+`npm ci` 判定为「不同步」的 lock。因此把 `rolldown` 钉在最后一个完整版本 `1.2.9`；等上游补齐
+全部平台包后即可删掉这条。
 
 ## 使用
 
@@ -172,9 +177,10 @@ macOS 想用 `Cmd+S`：`ctrl: false`、`meta: true`。
 被用户层覆盖的字段会标出，头部可折叠并在有未保存改动时显示标记，底部「保存」提交草稿、
 「放弃」丢弃草稿。改完无需重启。
 
-设置值仍来自本插件登记的设置命名空间 `session-messages`（Node 半通过
-`settings.installSection` 登记）。表单本身注册在插件页的 `plugins.bundle.config` 座位上，
-key 是**包名**——这个 key 决定表单挂到哪个 bundle 的页面，所以两者要一起改。
+设置值存放在设置命名空间 `session-messages`（即 `cordis.patch.yml` 里的 profile entry id）里，
+由 Node 半把所有 `Config` 字段标记为 `.volatile()` 来声明——只有 volatile 字段才可实时编辑，
+浏览器半再通过 `ctx.configForms` 读同一份文档。表单本身注册在插件页的 `plugins.bundle.config`
+座位上，key 是**包名**——这个 key 决定表单挂到哪个 bundle 的页面，所以两者要一起改。
 
 ## 视口浮条
 

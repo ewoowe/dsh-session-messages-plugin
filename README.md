@@ -87,10 +87,10 @@ session-messages-plugin/
       turn-facts.ts           per-turn facts: folds the event window to turn → model + cache share (usage via the host's deriveTurnTokenUsage)
       overlay.tsx             the list overlay: collection and jumping
       hud.tsx                 the viewport strip (header action seat)
-      use-messages-config.ts  resolve the live config (settings scope → page global)
+      use-messages-config.ts  resolve the live config (config form → page global)
       session-totals.ts       session-wide facts: projection reads + compact formatting
       settings-card.tsx       the bundle's configuration form on the Plugins page
-      settings-scope-holder.ts  the card's bound settings scope → overlay, one-way bridge
+      settings-form-holder.ts   the card's bound config form → overlay, one-way bridge
       locales.ts              the seven dictionaries (en, zh + five pack locales)
   lib/                build output (index.js / client.js)
   docs/               the screenshots the two READMEs embed (en / zh pairs)
@@ -138,8 +138,14 @@ npm run typecheck                          # tsc --noEmit
 ```
 
 **Versions are pinned rather than left to `latest`**: the `@deepseek-ai/*` family publishes a
-stale `latest` tag (`0.0.1-rc.1`) while the line this plugin matches is `0.1.5-rc.2` under `next` —
+stale `latest` tag (`0.0.1-rc.1`) while the line this plugin matches is `0.1.7-rc.1` under `next` —
 a bare install resolves to the wrong one. Bump these pins when the host moves.
+
+`overrides` pins one more version for the same reason, one level down: `tsdown` asks for
+`rolldown ~1.2.0`, but `rolldown@1.2.10` never published its
+`@rolldown/binding-linux-arm64-musl` binary, so a fresh resolve produces a lock file `npm ci`
+refuses as out of sync. `rolldown` is therefore held at `1.2.9`, the last complete release. The
+entry can go once upstream publishes a full platform set again.
 
 ## Usage
 
@@ -189,10 +195,12 @@ switch. Every field carries its own Reset, a field the user layer has overridden
 header collapses the form and shows an unsaved badge. Save applies the draft; discard drops it.
 No restart is needed.
 
-The values come from the settings namespace `session-messages` this plugin registers (the Node half
-does it through `settings.installSection`). The form itself is contributed through the Plugins
-page's `plugins.bundle.config` seat, keyed by the **package name**: that key is what pairs the form
-with this bundle's page, so the two have to be renamed together.
+The values live in the settings namespace `session-messages` — the profile entry id in
+`cordis.patch.yml` — which the Node half owns by marking every `Config` field `.volatile()`; that is
+what makes them live-editable, and the browser half reads the same document through
+`ctx.configForms`. The form itself is contributed through the Plugins page's `plugins.bundle.config`
+seat, keyed by the **package name**: that key is what pairs the form with this bundle's page, so the
+two have to be renamed together.
 
 ## Viewport strip
 
