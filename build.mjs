@@ -19,7 +19,7 @@ const ID = 'dsh-session-messages'
 /**
  * This script's own directory. Every path below is resolved against it rather
  * than the caller's cwd, so the build works whether it is run from inside the
- * plugin (`npm run build`) or from the repository root (`tsx session-messages-plugin/build.mjs`)
+ * plugin (`npm run build`) or from the repository root (`tsx dsh-session-messages-plugin/build.mjs`)
  * — relying on cwd silently looked for `<repo>/src/index.ts` in the latter case.
  */
 const ROOT = fileURLToPath(new URL('.', import.meta.url))
@@ -170,4 +170,4 @@ await build({
 // guards were silent until the page tried to load the plugin.
 assertBrowserPurity(`${ROOT}lib/client.js`)
 
-console.log('session-messages-plugin: built lib/index.js and lib/client.js')
+console.log('dsh-session-messages-plugin: built lib/index.js and lib/client.js')

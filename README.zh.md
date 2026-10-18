@@ -60,7 +60,7 @@
 ## 目录
 
 ```text
-session-messages-plugin/
+dsh-session-messages-plugin/
   package.json        dsh.bundle + dsh.client 声明、exports 映射
   cordis.patch.yml    层补丁（把自己登记为 Loader 条目并给配置）
   build.mjs           构建脚本（tsdown 编程接口）

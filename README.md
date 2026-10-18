@@ -71,7 +71,7 @@ A longer label must not rearrange a surface. Three mechanisms, one per way it co
 ## Layout
 
 ```text
-session-messages-plugin/
+dsh-session-messages-plugin/
   package.json        dsh.bundle + dsh.client declarations, exports map
   cordis.patch.yml    the layer patch (registers itself as a Loader entry, and its config)
   build.mjs           build script (tsdown's programmatic API)
